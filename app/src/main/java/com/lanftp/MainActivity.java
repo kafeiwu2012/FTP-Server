@@ -94,7 +94,9 @@ public final class MainActivity extends Activity {
   public void onCreate(Bundle saved) {
     super.onCreate(saved);
     getWindow().setStatusBarColor(Color.rgb(245, 248, 252));
-    getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+    if (Build.VERSION.SDK_INT >= 23)
+      getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+    else getWindow().setStatusBarColor(blue);
     ScrollView scroll = new ScrollView(this);
     scroll.setFillViewport(true);
     scroll.setOnApplyWindowInsetsListener(
@@ -120,11 +122,13 @@ public final class MainActivity extends Activity {
     root.setPadding(dp(24), dp(28), dp(24), dp(28));
     scroll.addView(root);
     setContentView(scroll);
-    root.addView(text("LAN / FILE SHARING · 3.1", 12, blue));
+    root.addView(text("LAN / FILE SHARING · 3.2", 12, blue));
     TextView title = text("把手机文件，\n留在你的局域网。", 30, ink);
     title.setTypeface(null, Typeface.BOLD);
     root.addView(title);
     root.addView(text("网页 + FTP · 手机本地文件共享", 14, muted));
+    if (Build.VERSION.SDK_INT < 26)
+      root.addView(text("兼容 Android 5.0 及以上。OPPO / ColorOS 请允许应用后台运行，并在最近任务中锁定应用，避免锁屏后共享被省电策略停止。", 13, muted));
     state = text("服务器已停止", 17, blue);
     state.setTypeface(null, Typeface.BOLD);
     root.addView(state);
@@ -287,7 +291,7 @@ public final class MainActivity extends Activity {
             | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
             | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
-    if (initial != null) {
+    if (initial != null && Build.VERSION.SDK_INT >= 26) {
       Uri document =
           android.provider.DocumentsContract.isTreeUri(initial)
               ? android.provider.DocumentsContract.buildDocumentUriUsingTree(
@@ -361,7 +365,8 @@ public final class MainActivity extends Activity {
             .putExtra("anonymous", anonymous.isChecked())
             .putExtra("anonymousWritable", anonymousWrite.isChecked());
     try {
-      startForegroundService(i);
+      if (Build.VERSION.SDK_INT >= 26) startForegroundService(i);
+      else startService(i);
       start.setEnabled(false);
       choose.setEnabled(false);
       writable.setEnabled(false);

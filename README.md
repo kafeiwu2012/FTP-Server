@@ -1,8 +1,20 @@
-# 局域网文件共享 3.1
+# 局域网文件共享 3.2（OPPO R7sm 兼容开发版）
 
-Android 8.0 及以上的本地文件服务器：共享手机已授权的文件夹，让同一局域网内的 Windows、iPad 等设备浏览、下载，并按权限上传、覆盖、删除。支持账号和匿名访问，无需 Root，不上传云端。
+Android 5.0 及以上的本地文件服务器：共享手机已授权的文件夹，让同一局域网内的 Windows、iPad 等设备浏览、下载，并按权限上传、覆盖、删除。支持账号和匿名访问，无需 Root，不上传云端。
 
-**[下载 Android APK 3.1](https://github.com/kafeiwu2012/FTP/raw/refs/heads/main/downloads/LanFTP-3.1.apk)** · [源码压缩包](downloads/LanFTP-3.1-source.zip) · [SHA-256 校验](downloads/SHA256SUMS)
+**[历史稳定版 APK 3.1（要求 Android 8.0+，不适用于 R7sm Android 5.1.1）](https://github.com/kafeiwu2012/FTP/raw/refs/heads/main/downloads/LanFTP-3.1.apk)** · [源码压缩包](downloads/LanFTP-3.1-source.zip) · [SHA-256 校验](downloads/SHA256SUMS)
+
+## OPPO R7sm / Android 5.1.1
+
+[下载 3.2 R7sm 调试测试 APK](downloads/LanFTP-3.2-R7sm-debug.apk) · [SHA-256 校验](downloads/SHA256SUMS)
+
+3.2 将最低系统版本降至 Android 5.0（API 21），针对 R7sm 的 Android 5.1.1（API 22）增加旧版服务启动、前台通知、目录选择器与 Java API 兼容处理。继续使用 SAF 系统文件夹授权，不申请全盘存储权限或 Root。应用无原生库，不依赖手机的 CPU 指令集。
+
+构建后的 `app/build/outputs/apk/debug/app-debug.apk` 是可安装的调试测试包，包含 Android 5.x 所需的 v1 签名。调试签名与历史发布签名不同，不能承诺覆盖安装历史发布版；不要用旧的 3.1 下载链接测试 R7sm。正式升级包需持有原发布密钥后签名。
+
+在手机中允许安装该 APK，选择实际要共享的本地文件夹并授权，再启动共享。ColorOS 中允许应用后台运行，并在最近任务中锁定应用；如锁屏后断开，检查系统省电管理。设置项名称随 ColorOS 版本可能不同。若提示缺少系统文件选择器，需恢复 / 启用系统文档应用；不会退回无授权的全盘访问。
+
+Android 5.x 不支持当前 SAF 适配器的修改时间戳操作，会返回明确失败；浏览、下载、上传、覆盖、重命名、删除仍走相同权限检查。代码与自动化检查通过不等于 OPPO 真机已验收，详见 [3.2 兼容验证](docs/validation-3.2-r7sm.md)。
 
 ## 安装与使用
 
@@ -50,7 +62,7 @@ FTP 地址为 `ftp://手机IP:2121`，可自定义端口。使用 FileZilla 或�
 
 ## 构建
 
-JDK 17 / 21、Android SDK Platform 35 / Build Tools 35.0.0，Gradle Wrapper 8.9、AGP 8.7.3。应用运行时无第三方依赖。
+JDK 17 / 21、Android SDK Platform 35 / Build Tools 35.0.0，Gradle Wrapper 8.9、AGP 8.7.3。Java 标准库兼容由 `desugar_jdk_libs` 提供，支持旧版 Android；无在线服务依赖。
 
 ```sh
 export JAVA_HOME=/path/to/jdk
@@ -58,7 +70,7 @@ export ANDROID_HOME=/path/to/android-sdk
 ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleRelease :app:lintDebug
 ```
 
-云环境使用 `./scripts/cloud-build.sh` 激活已有工具及受信代理 CA。调试包：`app/build/outputs/apk/debug/app-debug.apk`。Release 构建生成未签名包；可使用自己保管的签名密钥签署，云环境使用 `./scripts/sign-local.sh 3.1`。签名私钥位于仓库外，不包含在源码、APK 或下载目录中。后续更新需使用同一密钥。下载及 TLS 校验保持开启。
+云环境使用 `./scripts/cloud-build.sh` 激活已有工具及受信代理 CA。调试包：`app/build/outputs/apk/debug/app-debug.apk`。Release 构建生成未签名包；可使用自己保管的签名密钥签署，云环境使用 `./scripts/sign-local.sh 3.2`。签名私钥位于仓库外，不包含在源码、APK 或下载目录中。后续更新需使用同一密钥。下载及 TLS 校验保持开启。
 
 ## 验证
 
@@ -67,6 +79,7 @@ export ANDROID_HOME=/path/to/android-sdk
 ```sh
 python3 tests/test_ftp.py
 python3 tests/test_web.py
+./scripts/cloud-build.sh :app:testDebugUnitTest
 ./gradlew --no-daemon --max-workers=2 :app:lintDebug
 ```
 

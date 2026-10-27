@@ -20,7 +20,7 @@ public final class FtpService extends Service {
   private static volatile WebServer diagnosticWeb;
 
   public static String diagnostics() {
-    return "版本 3.1\n"
+    return "版本 3.2\n"
         + status
         + "\n"
         + folderStatus
@@ -81,30 +81,40 @@ public final class FtpService extends Service {
   @Override
   public void onCreate() {
     super.onCreate();
-    getSystemService(NotificationManager.class)
-        .createNotificationChannel(
+    if (Build.VERSION.SDK_INT >= 26)
+      notificationManager().createNotificationChannel(
             new NotificationChannel("ftp", "局域网文件共享", NotificationManager.IMPORTANCE_LOW));
   }
 
+  private NotificationManager notificationManager() {
+    return (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+  }
+
   private Notification notification(String text) {
+    int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+    if (Build.VERSION.SDK_INT >= 23) pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
     PendingIntent open =
         PendingIntent.getActivity(
             this,
             0,
             new Intent(this, MainActivity.class),
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            pendingFlags);
     PendingIntent stop =
         PendingIntent.getService(
             this,
             1,
             new Intent(this, FtpService.class).setAction("stop"),
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    return new Notification.Builder(this, "ftp")
+            pendingFlags);
+    Notification.Builder builder =
+        Build.VERSION.SDK_INT >= 26
+            ? new Notification.Builder(this, "ftp")
+            : new Notification.Builder(this);
+    return builder
         .setContentTitle("局域网文件共享")
         .setContentText(text)
         .setSmallIcon(android.R.drawable.stat_sys_upload)
         .setContentIntent(open)
-        .addAction(new Notification.Action.Builder(null, "停止共享", stop).build())
+        .addAction(android.R.drawable.ic_menu_close_clear_cancel, "停止共享", stop)
         .setOngoing(true)
         .build();
   }
@@ -201,7 +211,7 @@ public final class FtpService extends Service {
                           + (policy.anonymous
                               ? (policy.anonymousWritable ? " · 匿名可读写" : " · 匿名只读")
                               : " · 需账号登录");
-                  getSystemService(NotificationManager.class).notify(1, notification(status));
+                  notificationManager().notify(1, notification(status));
                 }
               } catch (Exception e) {
                 status =
@@ -245,7 +255,7 @@ public final class FtpService extends Service {
       activeUser = "";
     }
     if (status.startsWith("运行") || status.startsWith("正在")) status = "服务器已停止";
-    stopForeground(STOP_FOREGROUND_REMOVE);
+    stopForeground(true);
     super.onDestroy();
   }
 

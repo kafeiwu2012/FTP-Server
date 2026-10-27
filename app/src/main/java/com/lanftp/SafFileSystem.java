@@ -211,6 +211,8 @@ final class SafFileSystem implements FtpServer.Vfs {
   public void setModified(String path, long millis) throws IOException {
     parent(path);
     if (millis < 0) throw new IOException("Invalid timestamp");
+    if (android.os.Build.VERSION.SDK_INT < 26)
+      throw new IOException("此 Android 版本不支持通过授权目录修改时间戳");
     // Only the descriptor opened through the user-granted SAF tree is used.
     // Providers may reject metadata changes; return that failure to the client.
     try (ParcelFileDescriptor fd = resolver.openFileDescriptor(doc(resolve(path)), "rw")) {
