@@ -20,6 +20,7 @@ public final class WebServer implements Closeable {
   private final AtomicLong requests = new AtomicLong();
   private volatile boolean running = true;
   private volatile String lastResult = "尚无浏览器请求";
+  private volatile String localConnectivity = "尚未检测";
 
   public WebServer(FtpServer.Vfs fs, String user, String password, int port, AccessPolicy policy)
       throws IOException {
@@ -37,7 +38,37 @@ public final class WebServer implements Closeable {
   }
 
   public String diagnostics() {
-    return "网页端口=" + port() + " 请求=" + requests.get() + " · " + lastResult;
+    return "网页端口=" + port() + " 绑定=" + listener.getInetAddress().getHostAddress()
+        + " 请求=" + requests.get() + " · " + lastResult + "\n" + localConnectivity;
+  }
+
+  /** Run off the UI thread after start(); probe only this listener on local numeric addresses. */
+  public void checkLocalConnectivity(List<String> addresses) {
+    StringBuilder report = new StringBuilder();
+    for (String host : addresses) {
+      if (!running) return;
+      String label = host.equals("127.0.0.1") ? "IPv4 回环"
+          : host.equals("::1") ? "IPv6 回环" : "IPv6 本机地址 [" + host + "]";
+      report.append(label).append("：");
+      try (Socket socket = new Socket()) {
+        socket.connect(new InetSocketAddress(InetAddress.getByName(host), port()), 2000);
+        socket.setSoTimeout(2000);
+        String authority = (host.indexOf(':') >= 0 ? "[" + host + "]" : host) + ":" + port();
+        socket.getOutputStream().write(("GET / HTTP/1.1\r\nHost: " + authority
+            + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+        String status = line(socket.getInputStream(), 1024);
+        byte[] discard = new byte[4096];
+        while (socket.getInputStream().read(discard) != -1) { /* Drain the small built-in page. */ }
+        // 401 is expected when anonymous access is disabled: the HTTP listener was reached.
+        report.append(status.startsWith("HTTP/1.1 200 ") || status.startsWith("HTTP/1.1 401 ")
+            ? "可访问 · " + status : "请求失败 · " + status);
+      } catch (IOException | SecurityException e) {
+        report.append("连接失败 · ").append(e.getClass().getSimpleName());
+        if (e.getMessage() != null) report.append(" · ").append(e.getMessage());
+      }
+      report.append('\n');
+      localConnectivity = report.toString().trim();
+    }
   }
 
   public void start() {

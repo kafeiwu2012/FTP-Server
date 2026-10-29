@@ -28,9 +28,18 @@ class WebTests(unittest.TestCase):
  def setUpClass(cls):
   cls.temp=tempfile.TemporaryDirectory();cls.build=pathlib.Path(cls.temp.name)
   source=REPO/'app/src/main/java/com/lanftp'
-  subprocess.run(['javac','-encoding','UTF-8','-d',str(cls.build),*[str(source/(n+'.java')) for n in ['AccessPolicy','FtpServer','WebServer','WebUi']],str(REPO/'tests/LocalFileSystem.java'),str(REPO/'tests/ServerHarness.java')],check=True)
+  subprocess.run(['javac','-encoding','UTF-8','-d',str(cls.build),*[str(source/(n+'.java')) for n in ['AccessPolicy','FtpServer','WebServer','WebUi']],str(REPO/'tests/LocalFileSystem.java'),str(REPO/'tests/ServerHarness.java'),str(REPO/'tests/ConnectivityHarness.java')],check=True)
  @classmethod
  def tearDownClass(cls):cls.temp.cleanup()
+ def test_phone_connectivity_diagnostics(self):
+  with tempfile.TemporaryDirectory() as root:
+   for anonymous,code in [(True,'200'),(False,'401')]:
+    result=subprocess.run(['java','-cp',str(self.build),'com.lanftp.ConnectivityHarness',root,str(anonymous).lower()],check=True,capture_output=True,text=True,timeout=15)
+    self.assertIn('IPv4 回环：可访问 · HTTP/1.1 '+code,result.stdout)
+    self.assertIn('IPv6 回环：可访问 · HTTP/1.1 '+code,result.stdout)
+   result=subprocess.run(['java','-Djava.net.preferIPv4Stack=true','-cp',str(self.build),'com.lanftp.ConnectivityHarness',root,'true'],check=True,capture_output=True,text=True,timeout=15)
+   self.assertIn('IPv4 回环：可访问',result.stdout)
+   self.assertIn('IPv6 回环：连接失败',result.stdout)
  def test_ipv6_transfer_authentication_and_same_origin(self):
   # A real IPv6 connection is required; this must not silently pass on IPv4.
   with socket.socket(socket.AF_INET6,socket.SOCK_STREAM) as probe:
@@ -56,7 +65,7 @@ class WebTests(unittest.TestCase):
    self.assertFalse((root/'IPv6上传.bin').exists())
  def test_ip_literal_host_validation(self):
   with server(self.build) as (_,_,port):
-   for host in ['[::1]','[2001:db8::1]:8080','[fd12:3456::abcd]:65535','[::ffff:127.0.0.1]:80','127.0.0.1','localhost:80']:
+   for host in ['[::1]','[2001:db8::1]:8080','[2001:db8:300:728::1a]:8080','[fd12:3456::abcd]:65535','[::ffff:127.0.0.1]:80','127.0.0.1','localhost:80']:
     with self.subTest(host=host):self.assertEqual(request(port,headers={'Host':host})[0],200)
    for host in ['::1','[127.0.0.1]','[:::1]','[2001:db8::xyz]','[::1','[::1]:0','[::1]:65536','[::1]:','[fe80::1%25wlan0]:8080','evil.example','[::1]@evil.example','999.999.999.999']:
     with self.subTest(host=host):self.assertEqual(request(port,headers={'Host':host})[0],400)

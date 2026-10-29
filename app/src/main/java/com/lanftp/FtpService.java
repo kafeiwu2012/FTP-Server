@@ -20,7 +20,7 @@ public final class FtpService extends Service {
   private static volatile WebServer diagnosticWeb;
 
   public static String diagnostics() {
-    return "版本 3.3\n"
+    return "版本 3.3.1\n"
         + status
         + "\n"
         + folderStatus
@@ -233,6 +233,12 @@ public final class FtpService extends Service {
                               ? (policy.anonymousWritable ? " · 匿名可读写" : " · 匿名只读")
                               : " · 需账号登录");
                   notificationManager().notify(1, notification(status));
+                  WebServer currentWeb = web;
+                  new Thread(() -> {
+                    List<String> probes = new ArrayList<>(Arrays.asList("127.0.0.1", "::1"));
+                    for (String ip : lanWebIps()) if (ip.indexOf(':') >= 0) probes.add(ip);
+                    currentWeb.checkLocalConnectivity(probes);
+                  }, "web-local-check").start();
                 }
               } catch (Exception e) {
                 status =

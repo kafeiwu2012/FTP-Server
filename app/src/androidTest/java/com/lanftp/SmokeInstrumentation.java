@@ -14,10 +14,12 @@ import java.util.*;
 public final class SmokeInstrumentation extends Instrumentation {
   private MainActivity activity;
   private File stop;
+  private boolean ipv6Only;
 
   @Override
   public void onCreate(Bundle args) {
     super.onCreate(args);
+    ipv6Only = args != null && "ipv6".equals(args.getString("mode"));
     start();
   }
 
@@ -27,6 +29,11 @@ public final class SmokeInstrumentation extends Instrumentation {
     try {
       if (!Build.FINGERPRINT.contains("generic") && !Build.FINGERPRINT.contains("emulator"))
         throw new IllegalStateException("Disposable AOSP emulator required");
+      if (ipv6Only) {
+        result.putString("result", Ipv6Smoke.run());
+        finish(Activity.RESULT_OK, result);
+        return;
+      }
       stop = new File(getTargetContext().getFilesDir(), "smoke-stop");
       stop.delete();
       new File(getTargetContext().getFilesDir(), "smoke-ready").delete();

@@ -3,7 +3,7 @@ android {
     namespace 'com.lanftp'
     compileSdk 35
     buildToolsVersion '35.0.0'
-    defaultConfig { applicationId 'com.lanftp'; minSdk 21; targetSdk 35; versionCode 8; versionName '3.3'; testInstrumentationRunner 'com.lanftp.SmokeInstrumentation' }
+    defaultConfig { applicationId 'com.lanftp'; minSdk 21; targetSdk 35; versionCode 9; versionName '3.3.1'; testInstrumentationRunner 'com.lanftp.SmokeInstrumentation' }
     compileOptions { coreLibraryDesugaringEnabled true; sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     testOptions { unitTests.includeAndroidResources = true }
     buildTypes { debug { debuggable true }; release { minifyEnabled false } }

@@ -122,7 +122,7 @@ public final class MainActivity extends Activity {
     root.setPadding(dp(24), dp(28), dp(24), dp(28));
     scroll.addView(root);
     setContentView(scroll);
-    root.addView(text("LAN / FILE SHARING · 3.3", 12, blue));
+    root.addView(text("LAN / FILE SHARING · 3.3.1", 12, blue));
     TextView title = text("把手机文件，\n留在你的局域网。", 30, ink);
     title.setTypeface(null, Typeface.BOLD);
     root.addView(title);

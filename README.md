@@ -1,10 +1,14 @@
-# 局域网文件共享 3.3（HTTP IPv6 开发版）
+# 局域网文件共享 3.3.1（手机 IPv6 诊断版）
 
 Android 5.0 及以上的本地文件服务器：共享手机已授权的文件夹，让同一局域网内的 Windows、iPad 等设备浏览、下载，并按权限上传、覆盖、删除。支持账号和匿名访问，无需 Root，不上传云端。
 
 **[历史稳定版 APK 3.1（要求 Android 8.0+，不适用于 R7sm Android 5.1.1）](https://github.com/kafeiwu2012/FTP/raw/refs/heads/main/downloads/LanFTP-3.1.apk)** · [源码压缩包](downloads/LanFTP-3.1-source.zip) · [SHA-256 校验](downloads/SHA256SUMS)
 
 ## HTTP IPv6
+
+[下载 3.3.1 IPv6 诊断测试 APK](downloads/LanFTP-3.3.1-IPv6-diagnostics-debug.apk) · [SHA-256 校验](downloads/SHA256SUMS)
+
+3.3.1 在“连接诊断”中增加手机自身的 IPv4 / IPv6 HTTP 连通性检测，用于排查手机访问自身 IPv6 失败。尚不能据此宣称 OPPO 真机问题已修复；使用方法和证据见 [诊断版说明](docs/validation-3.3.1-ipv6-diagnostics.md)。
 
 [下载 3.3 IPv6 调试测试 APK](downloads/LanFTP-3.3-IPv6-debug.apk) · [SHA-256 校验](downloads/SHA256SUMS)
 
@@ -80,7 +84,7 @@ export ANDROID_HOME=/path/to/android-sdk
 ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleRelease :app:lintDebug
 ```
 
-云环境使用 `./scripts/cloud-build.sh` 激活已有工具及受信代理 CA。调试包：`app/build/outputs/apk/debug/app-debug.apk`。Release 构建生成未签名包；可使用自己保管的签名密钥签署，云环境使用 `./scripts/sign-local.sh 3.3`。签名私钥位于仓库外，不包含在源码、APK 或下载目录中。后续更新需使用同一密钥。下载及 TLS 校验保持开启。
+云环境使用 `./scripts/cloud-build.sh` 激活已有工具及受信代理 CA。调试包：`app/build/outputs/apk/debug/app-debug.apk`。Release 构建生成未签名包；可使用自己保管的签名密钥签署，云环境使用 `./scripts/sign-local.sh 3.3.1`。签名私钥位于仓库外，不包含在源码、APK 或下载目录中。后续更新需使用同一密钥。下载及 TLS 校验保持开启。
 
 ## 验证
 
