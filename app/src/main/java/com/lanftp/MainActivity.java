@@ -122,7 +122,7 @@ public final class MainActivity extends Activity {
     root.setPadding(dp(24), dp(28), dp(24), dp(28));
     scroll.addView(root);
     setContentView(scroll);
-    root.addView(text("LAN / FILE SHARING · 3.2", 12, blue));
+    root.addView(text("LAN / FILE SHARING · 3.3", 12, blue));
     TextView title = text("把手机文件，\n留在你的局域网。", 30, ink);
     title.setTypeface(null, Typeface.BOLD);
     root.addView(title);
@@ -180,7 +180,7 @@ public final class MainActivity extends Activity {
             toast("请先启动共享");
             return;
           }
-          java.util.List<String> ips = FtpService.lanIps();
+          java.util.List<String> ips = FtpService.lanWebIps();
           if (ips.isEmpty()) {
             toast("未发现局域网地址");
             return;
@@ -188,8 +188,8 @@ public final class MainActivity extends Activity {
           java.util.List<String> options = new java.util.ArrayList<>();
           for (String ip : ips) {
             if (FtpService.activeWebPort != 0)
-              options.add("http://" + ip + ":" + FtpService.activeWebPort);
-            options.add("ftp://" + ip + ":" + FtpService.activePort);
+              options.add(FtpService.webAddress(ip, FtpService.activeWebPort));
+            if (ip.indexOf(':') < 0) options.add("ftp://" + ip + ":" + FtpService.activePort);
           }
           new AlertDialog.Builder(this)
               .setTitle("选择要复制的连接地址")

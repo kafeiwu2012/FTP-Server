@@ -22,6 +22,17 @@ import org.robolectric.annotation.Config;
 @Config(sdk = {21, 22, 26})
 public class LegacyAndroidTest {
   @Test
+  @Config(sdk = 22)
+  public void webAddressesIncludeGlobalAndPrivateIpv6WithoutUnusableScopes() throws Exception {
+    for (String ip : new String[] {"192.168.1.2", "2001:db8::1234", "fd12:3456::1"})
+      assertTrue(ip, FtpService.isWebAddress(java.net.InetAddress.getByName(ip)));
+    for (String ip : new String[] {"127.0.0.1", "0.0.0.0", "::1", "::", "fe80::1", "ff02::1"})
+      assertFalse(ip, FtpService.isWebAddress(java.net.InetAddress.getByName(ip)));
+    assertEquals("http://[2001:db8::1234]:8080", FtpService.webAddress("2001:db8::1234", 8080));
+    assertEquals("http://192.168.1.2:8080", FtpService.webAddress("192.168.1.2", 8080));
+  }
+
+  @Test
   public void activityOpensAndRequestsPersistableFolderAccess() {
     try (ActivityController<MainActivity> controller =
         Robolectric.buildActivity(MainActivity.class).setup()) {

@@ -1,8 +1,18 @@
-# 局域网文件共享 3.2（OPPO R7sm 兼容开发版）
+# 局域网文件共享 3.3（HTTP IPv6 开发版）
 
 Android 5.0 及以上的本地文件服务器：共享手机已授权的文件夹，让同一局域网内的 Windows、iPad 等设备浏览、下载，并按权限上传、覆盖、删除。支持账号和匿名访问，无需 Root，不上传云端。
 
 **[历史稳定版 APK 3.1（要求 Android 8.0+，不适用于 R7sm Android 5.1.1）](https://github.com/kafeiwu2012/FTP/raw/refs/heads/main/downloads/LanFTP-3.1.apk)** · [源码压缩包](downloads/LanFTP-3.1-source.zip) · [SHA-256 校验](downloads/SHA256SUMS)
+
+## HTTP IPv6
+
+[下载 3.3 IPv6 调试测试 APK](downloads/LanFTP-3.3-IPv6-debug.apk) · [SHA-256 校验](downloads/SHA256SUMS)
+
+3.3 的网页服务支持 IPv4 和 IPv6。启动共享后，主界面显示可用的 IPv4 / IPv6 网页地址；“复制连接地址”可选择各个网络接口的地址。IPv6 地址必须带方括号，例如 `http://[2001:db8::1234]:8080`（示例地址，实际请复制手机显示的地址）。账号、匿名开关、文件授权与写入权限在两种地址下相同。
+
+展示的 IPv6 包括全局地址与 ULA 私有地址。`fe80::` 链路本地地址需要客户端接口标识，浏览器支持不一致，因此不作为可复制的网页地址，也不接受带 zone 的 Host。手机与访问设备需要具备相应 IPv6 连通性；本功能不会替路由器或运营商配置 IPv6、开放防火墙。FTP 地址菜单仍使用 IPv4。
+
+IPv6 仍使用明文 HTTP，仅向可信网络共享。自动化验证包含真实 `::1` IPv6 TCP 连接和 IPv6 Chromium 文件操作；手机网络上的实际可达性需在设备上确认。详见 [3.3 IPv6 验证记录](docs/validation-3.3-ipv6.md)。
 
 ## OPPO R7sm / Android 5.1.1
 
@@ -70,7 +80,7 @@ export ANDROID_HOME=/path/to/android-sdk
 ./gradlew --no-daemon --max-workers=2 :app:assembleDebug :app:assembleRelease :app:lintDebug
 ```
 
-云环境使用 `./scripts/cloud-build.sh` 激活已有工具及受信代理 CA。调试包：`app/build/outputs/apk/debug/app-debug.apk`。Release 构建生成未签名包；可使用自己保管的签名密钥签署，云环境使用 `./scripts/sign-local.sh 3.2`。签名私钥位于仓库外，不包含在源码、APK 或下载目录中。后续更新需使用同一密钥。下载及 TLS 校验保持开启。
+云环境使用 `./scripts/cloud-build.sh` 激活已有工具及受信代理 CA。调试包：`app/build/outputs/apk/debug/app-debug.apk`。Release 构建生成未签名包；可使用自己保管的签名密钥签署，云环境使用 `./scripts/sign-local.sh 3.3`。签名私钥位于仓库外，不包含在源码、APK 或下载目录中。后续更新需使用同一密钥。下载及 TLS 校验保持开启。
 
 ## 验证
 
@@ -89,6 +99,7 @@ python3 tests/test_web.py
 
 ```sh
 python3 tests/run_browser_smoke.py
+BROWSER_HOST=::1 python3 tests/run_browser_smoke.py
 ```
 
 在桌面和平板尺寸下实际操作匿名只读、账号登录、新建目录、中文上传、确认覆盖、下载逐字节校验、删除；同时检查页面没有 JavaScript 错误。使用 Chromium，不代表 Safari 引擎或 iPad 真机已通过。

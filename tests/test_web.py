@@ -14,12 +14,12 @@ def server(build,write=False,anonymous=False,anonymous_write=False):
    ftp,port=map(int,p.stdout.readline().split());yield root,ftp,port
   finally:
    p.stdin.write('\n');p.stdin.flush();p.wait(timeout=10);p.stdin.close();p.stdout.close()
-def request(port,method='GET',route='/',path=None,body=None,auth=AUTH,headers=None,overwrite=False):
+def request(port,method='GET',route='/',path=None,body=None,auth=AUTH,headers=None,overwrite=False,host='127.0.0.1'):
  if path is not None:route+='?'+urlencode({'path':path})+('&overwrite=1' if overwrite else '')
  h={'X-LanFTP-Request':'1'}
  if auth is not None:h['Authorization']=auth
  if headers:h.update(headers)
- c=http.client.HTTPConnection('127.0.0.1',port,timeout=10)
+ c=http.client.HTTPConnection(host,port,timeout=10)
  try:
   c.request(method,route,body=body,headers=h);r=c.getresponse();return r.status,dict(r.getheaders()),r.read()
  finally:c.close()
@@ -31,6 +31,35 @@ class WebTests(unittest.TestCase):
   subprocess.run(['javac','-encoding','UTF-8','-d',str(cls.build),*[str(source/(n+'.java')) for n in ['AccessPolicy','FtpServer','WebServer','WebUi']],str(REPO/'tests/LocalFileSystem.java'),str(REPO/'tests/ServerHarness.java')],check=True)
  @classmethod
  def tearDownClass(cls):cls.temp.cleanup()
+ def test_ipv6_transfer_authentication_and_same_origin(self):
+  # A real IPv6 connection is required; this must not silently pass on IPv4.
+  with socket.socket(socket.AF_INET6,socket.SOCK_STREAM) as probe:
+   probe.bind(('::1',0))
+  with server(self.build,write=True) as (root,_,port):
+   self.assertEqual(request(port,host='::1',auth=None)[0],401)
+   self.assertEqual(request(port,host='::1',auth='Basic eDpiYWQ=')[0],401)
+   self.assertEqual(request(port,host='::1')[0],200)
+   status,_,data=request(port,route='/api/list',path='/',host='::1')
+   self.assertEqual(status,200);self.assertIn('你好.txt',[e['name'] for e in json.loads(data)['entries']])
+   payload=bytes(range(256))*1000
+   origin='http://[::1]:'+str(port)
+   self.assertEqual(request(port,'PUT','/api/file','/IPv6上传.bin',payload,host='::1',headers={'Origin':origin})[0],200)
+   self.assertEqual((root/'IPv6上传.bin').read_bytes(),payload)
+   self.assertEqual(request(port,route='/api/file',path='/IPv6上传.bin',host='::1')[2],payload)
+   self.assertEqual(request(port,route='/api/file',path='/IPv6上传.bin')[2],payload)
+   status,_,data=request(port,route='/api/file',path='/IPv6上传.bin',host='::1',headers={'Range':'bytes=10-25'})
+   self.assertEqual(status,206);self.assertEqual(data,payload[10:26])
+   for bad_origin in ['http://[::2]:'+str(port),'http://[::1]:'+str(port+1),'http://evil.example']:
+    self.assertEqual(request(port,'PUT','/api/file','/attack',b'bad',host='::1',headers={'Origin':bad_origin})[0],403)
+   self.assertFalse((root/'attack').exists())
+   self.assertEqual(request(port,'DELETE','/api/file','/IPv6上传.bin',host='::1',headers={'Origin':origin})[0],200)
+   self.assertFalse((root/'IPv6上传.bin').exists())
+ def test_ip_literal_host_validation(self):
+  with server(self.build) as (_,_,port):
+   for host in ['[::1]','[2001:db8::1]:8080','[fd12:3456::abcd]:65535','[::ffff:127.0.0.1]:80','127.0.0.1','localhost:80']:
+    with self.subTest(host=host):self.assertEqual(request(port,headers={'Host':host})[0],200)
+   for host in ['::1','[127.0.0.1]','[:::1]','[2001:db8::xyz]','[::1','[::1]:0','[::1]:65536','[::1]:','[fe80::1%25wlan0]:8080','evil.example','[::1]@evil.example','999.999.999.999']:
+    with self.subTest(host=host):self.assertEqual(request(port,headers={'Host':host})[0],400)
  def test_ftp_account_mutations_and_anonymous_permissions(self):
   for anonymous,guest_write in [(False,False),(True,False),(True,True)]:
    with server(self.build,write=True,anonymous=anonymous,anonymous_write=guest_write) as (root,port,_):

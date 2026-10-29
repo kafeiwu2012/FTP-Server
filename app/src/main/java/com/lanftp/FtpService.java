@@ -20,7 +20,7 @@ public final class FtpService extends Service {
   private static volatile WebServer diagnosticWeb;
 
   public static String diagnostics() {
-    return "版本 3.2\n"
+    return "版本 3.3\n"
         + status
         + "\n"
         + folderStatus
@@ -35,7 +35,18 @@ public final class FtpService extends Service {
   private boolean destroyed, starting;
   private final Object lock = new Object();
 
-  static List<String> lanIps() {
+  static boolean isWebAddress(InetAddress ip) {
+    if (ip.isLoopbackAddress() || ip.isAnyLocalAddress() || ip.isMulticastAddress()) return false;
+    return ip instanceof Inet4Address
+        ? ip.isSiteLocalAddress()
+        : ip instanceof Inet6Address && !ip.isLinkLocalAddress();
+  }
+
+  static String webAddress(String ip, int port) {
+    return "http://" + (ip.indexOf(':') >= 0 ? "[" + ip + "]" : ip) + ":" + port;
+  }
+
+  static List<String> lanWebIps() {
     List<String> ips = new ArrayList<>();
     try {
       List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
@@ -57,7 +68,11 @@ public final class FtpService extends Service {
         Enumeration<InetAddress> addresses = n.getInetAddresses();
         while (addresses.hasMoreElements()) {
           InetAddress ip = addresses.nextElement();
-          if (ip instanceof Inet4Address && ip.isSiteLocalAddress()) ips.add(ip.getHostAddress());
+          if (isWebAddress(ip)) {
+            // Global and ULA IPv6 addresses need no interface zone in browser URLs.
+            String host = ip.getHostAddress().split("%", 2)[0];
+            if (!ips.contains(host)) ips.add(host);
+          }
         }
       }
     } catch (SocketException ignored) {
@@ -67,14 +82,20 @@ public final class FtpService extends Service {
 
   public static String addresses() {
     List<String> lines = new ArrayList<>();
-    List<String> ips = lanIps();
-    for (String ip : ips.isEmpty() ? Collections.<String>emptyList() : ips.subList(0, 1)) {
-      if (activeWebPort != 0) lines.add("网页  http://" + ip + ":" + activeWebPort);
-      lines.add("FTP  ftp://" + ip + ":" + activePort);
+    List<String> ips = lanWebIps();
+    boolean shown4 = false, shown6 = false;
+    for (String ip : ips) {
+      boolean ipv6 = ip.indexOf(':') >= 0;
+      if (ipv6 ? shown6 : shown4) continue;
+      if (activeWebPort != 0) lines.add("网页  " + webAddress(ip, activeWebPort));
+      if (!ipv6) lines.add("FTP  ftp://" + ip + ":" + activePort);
+      if (ipv6) shown6 = true;
+      else shown4 = true;
     }
-    if (ips.size() > 1) lines.add("其他网络地址可点“复制连接地址”选择");
+    if (ips.size() > (shown4 ? 1 : 0) + (shown6 ? 1 : 0))
+      lines.add("其他网络地址可点“复制连接地址”选择");
     return lines.isEmpty()
-        ? "未发现局域网 IPv4 地址，请连接 Wi-Fi 或开启热点"
+        ? "未发现可用的 IPv4 / IPv6 地址，请连接 Wi-Fi 或开启热点"
         : android.text.TextUtils.join("\n", lines);
   }
 

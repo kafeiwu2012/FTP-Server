@@ -76,6 +76,21 @@ public final class WebServer implements Closeable {
     workers.shutdownNow();
   }
 
+  private static boolean validHost(String host) {
+    // Accept IP literals only (plus localhost); never resolve untrusted Host values via DNS.
+    if (host == null
+        || !host.matches(
+            "(?:(?:[0-9]{1,3}\\.){3}[0-9]{1,3}|localhost|\\[[0-9a-fA-F:.]+\\])(?::[0-9]{1,5})?"))
+      return false;
+    try {
+      URI authority = new URI("http://" + host);
+      int port = authority.getPort();
+      return authority.getHost() != null && (port == -1 || (port > 0 && port <= 65535));
+    } catch (URISyntaxException e) {
+      return false;
+    }
+  }
+
   private static final class HttpError extends IOException {
     final int status;
 
@@ -183,10 +198,7 @@ public final class WebServer implements Closeable {
             throw new HttpError(400, "重复或无效请求头");
         }
         String host = headers.get("host");
-        if (host == null
-            || !host.matches(
-                "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?::[0-9]{1,5})?|localhost(?::[0-9]{1,5})?"))
-          throw new HttpError(400, "Host 无效");
+        if (!validHost(host)) throw new HttpError(400, "Host 无效");
         requests.incrementAndGet();
         String route = uri.getPath();
         boolean guest = authenticate(headers.get("authorization"));
